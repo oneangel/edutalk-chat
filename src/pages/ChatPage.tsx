@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,13 +12,16 @@ import {
   Clock,
   MessageSquare,
 } from 'lucide-react';
+import { getUserMessages } from '@/lib/messages';
 
 interface Message {
   id: string;
+  conversation_id: string;
+  sender_id: string;
   content: string;
-  timestamp: string;
-  status: 'sent' | 'delivered' | 'read';
-  isMine: boolean;
+  sent_at: string;
+  state: 'pending' | 'unread' | 'seen';
+  status: boolean;
 }
 
 interface Chat {
@@ -29,9 +33,12 @@ interface Chat {
   unread: number;
 }
 
+const socket = io('https://edutalk-by8w.onrender.com');
+
 export function ChatPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentChat, setCurrentChat] = useState<Chat | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const chats: Chat[] = [
     {
@@ -42,39 +49,58 @@ export function ChatPage() {
       timestamp: '10:30',
       unread: 2,
     },
-    // Add more chats as needed
   ];
 
-  const messages: Message[] = [
-    {
-      id: '1',
-      content: '¿Tienes los apuntes de matemáticas?',
-      timestamp: '10:30',
-      status: 'read',
-      isMine: false,
-    },
-    {
-      id: '2',
-      content: 'Sí, te los envío en un momento',
-      timestamp: '10:31',
-      status: 'read',
-      isMine: true,
-    },
-    // Add more messages as needed
-  ];
+  //Get messages from API
+  useEffect(()=> {
+    if(!currentChat) return;
 
-  const MessageStatus = ({ status }: { status: Message['status'] }) => {
-    switch (status) {
-      case 'sent':
+    const fetchMessages = async () => {
+      try {
+        const messagesData = await getUserMessages();
+        setMessages(messagesData);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+
+    socket.on(
+      'chat.conversation.af72a86f-f097-4d46-8415-60df848a0520',
+      (newMessage) => {
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      }
+    );
+
+    socket.on("chat.message.state", (data) => {
+      const { message_id, state } = data;
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === message_id ? { ...msg, state } : msg
+        )
+      );
+    });
+
+    return () => {
+      socket.off(`chat.conversation.af72a86f-f097-4d46-8415-60df848a0520`);
+      socket.off("chat.message.state");
+    };
+  }, [currentChat]);
+
+  const MessageStatus = ({ state }: { state: Message['state'] }) => {
+    switch (state.toLocaleLowerCase()) {
+      case 'pending':
         return <Check className="w-4 h-4 text-gray-400" />;
-      case 'delivered':
+      case 'unread':
         return (
           <div className="flex">
             <Check className="w-4 h-4 text-gray-400" />
             <Check className="w-4 h-4 -ml-2 text-gray-400" />
           </div>
         );
-      case 'read':
+      case 'seen':
         return (
           <div className="flex">
             <Check className="w-4 h-4 text-blue-500" />
@@ -166,19 +192,19 @@ export function ChatPage() {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.isMine ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${message.sender_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca' ? 'justify-end' : 'justify-start'} space-x-4`}
                 >
                   <div
                     className={`max-w-[70%] rounded-lg p-3 ${
-                      message.isMine
+                      message.sender_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca'
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-100 text-gray-900'
                     }`}
                   >
                     <p>{message.content}</p>
                     <div className="flex items-center justify-end space-x-1 mt-1">
-                      <span className="text-xs opacity-70">{message.timestamp}</span>
-                      {message.isMine && <MessageStatus status={message.status} />}
+                      <span className="text-xs opacity-70">{message.sent_at.split("T")[1].split(":").slice(0, 2).join(":")}</span>
+                      {message.sender_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca' && <MessageStatus state={message.state} />}
                     </div>
                   </div>
                 </div>
