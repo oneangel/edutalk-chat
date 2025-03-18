@@ -56,10 +56,10 @@ export function ChatPage() {
   // Función para resaltar coincidencias
   const highlightText = (text: string, search: string) => {
     if (!search.trim()) return text;
-    
+
     const escapedSearch = escapeRegExp(search);
     const regex = new RegExp(`(${escapedSearch})`, 'gi');
-    return text.split(regex).map((part, index) => 
+    return text.split(regex).map((part, index) =>
       regex.test(part) ? (
         <span key={index} className="bg-yellow-200">
           {part}
@@ -70,6 +70,7 @@ export function ChatPage() {
     );
   };
 
+  // Obtener mensajes de la API
   useEffect(() => {
     if (!currentChat) return;
 
@@ -77,7 +78,7 @@ export function ChatPage() {
       try {
         const messagesData = await getUserMessages();
         setMessages(messagesData);
-        setFilteredMessages(messagesData);
+        setFilteredMessages(messagesData); // Inicializar los mensajes filtrados
       } catch (error) {
         console.error('Error fetching messages:', error);
       }
@@ -85,15 +86,25 @@ export function ChatPage() {
 
     fetchMessages();
 
+    // Escuchar nuevos mensajes
     socket.on('chat.conversation.af72a86f-f097-4d46-8415-60df848a0520', (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-      setFilteredMessages((prev) => [...prev, newMessage]);
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+      setFilteredMessages((prevMessages) => [...prevMessages, newMessage]); // Actualizar mensajes filtrados
     });
 
+    // Escuchar actualizaciones de estado de mensajes
     socket.on('chat.message.state', (data) => {
       const { message_id, state } = data;
-      setMessages((prev) => prev.map(msg => msg.id === message_id ? {...msg, state} : msg));
-      setFilteredMessages((prev) => prev.map(msg => msg.id === message_id ? {...msg, state} : msg));
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === message_id ? { ...msg, state } : msg
+        )
+      );
+      setFilteredMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === message_id ? { ...msg, state } : msg
+        )
+      );
     });
 
     return () => {
@@ -102,15 +113,19 @@ export function ChatPage() {
     };
   }, [currentChat]);
 
+  // Función para buscar mensajes
   const searchMessages = () => {
-    const filtered = messageSearchTerm 
-      ? messages.filter(msg => 
-          msg.content.toLowerCase().includes(messageSearchTerm.toLowerCase())
-        )
-      : messages;
-    setFilteredMessages(filtered);
+    if (messageSearchTerm.trim() === '') {
+      setFilteredMessages(messages); // Si no hay término de búsqueda, mostrar todos los mensajes
+    } else {
+      const filtered = messages.filter((message) =>
+        message.content.toLowerCase().includes(messageSearchTerm.toLowerCase())
+      );
+      setFilteredMessages(filtered); // Filtrar mensajes que coincidan con el término de búsqueda
+    }
   };
 
+  // Función para enviar un mensaje
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentChat) return;
 
@@ -120,46 +135,55 @@ export function ChatPage() {
       return;
     }
 
+    const messageToSend = {
+      conversation_id: 'af72a86f-f097-4d46-8415-60df848a0520', // Reemplaza con el UUID correcto
+      sender_id: '658b8f0e-4da1-46e4-ab9e-0558c5374dca', // Reemplaza con el UUID del usuario actual
+      content: newMessage,
+    };
+
     try {
       const response = await fetch('https://edutalk-by8w.onrender.com/api/message', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          conversation_id: 'af72a86f-f097-4d46-8415-60df848a0520',
-          sender_id: '658b8f0e-4da1-46e4-ab9e-0558c5374dca',
-          content: newMessage,
-        }),
+        body: JSON.stringify(messageToSend),
       });
 
-      if (!response.ok) throw new Error('Error sending message');
-      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error sending message');
+      }
+
       const data = await response.json();
-      setNewMessage('');
-      socket.emit('chat.message', data);
+      setNewMessage(''); // Limpiar el input
+      socket.emit('chat.message', data); // Notificar a otros usuarios via WebSocket
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
   const MessageStatus = ({ state }: { state: Message['state'] }) => {
-    switch (state.toLowerCase()) {
-      case 'pending': return <Check className="w-4 h-4 text-gray-400" />;
-      case 'unread': return (
-        <div className="flex">
-          <Check className="w-4 h-4 text-gray-400" />
-          <Check className="w-4 h-4 -ml-2 text-gray-400" />
-        </div>
-      );
-      case 'seen': return (
-        <div className="flex">
-          <Check className="w-4 h-4 text-blue-500" />
-          <Check className="w-4 h-4 -ml-2 text-blue-500" />
-        </div>
-      );
-      default: return <Clock className="w-4 h-4 text-gray-400" />;
+    switch (state.toLocaleLowerCase()) {
+      case 'pending':
+        return <Check className="w-4 h-4 text-gray-400" />;
+      case 'unread':
+        return (
+          <div className="flex">
+            <Check className="w-4 h-4 text-gray-400" />
+            <Check className="w-4 h-4 -ml-2 text-gray-400" />
+          </div>
+        );
+      case 'seen':
+        return (
+          <div className="flex">
+            <Check className="w-4 h-4 text-blue-500" />
+            <Check className="w-4 h-4 -ml-2 text-blue-500" />
+          </div>
+        );
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
@@ -167,7 +191,64 @@ export function ChatPage() {
     <div className="h-[calc(100vh-12rem)] bg-white rounded-lg shadow-lg flex">
       {/* Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col">
-        {/* ... (código del sidebar sin cambios) */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Buscar chat..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Nuevo chat</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <Input placeholder="Buscar usuario..." />
+                  {/* Add user list here */}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+        <ScrollArea className="flex-1">
+          {chats
+            .filter((chat) =>
+              chat.name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .map((chat) => (
+              <button
+                key={chat.id}
+                className={`w-full p-4 flex items-center space-x-4 hover:bg-gray-50 transition-colors ${
+                  currentChat?.id === chat.id ? 'bg-gray-50' : ''
+                }`}
+                onClick={() => setCurrentChat(chat)}
+              >
+                <Avatar>
+                  <AvatarImage src={chat.avatar} />
+                  <AvatarFallback>{chat.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <div className="flex justify-between">
+                    <span className="font-medium">{chat.name}</span>
+                    <span className="text-sm text-gray-500">{chat.timestamp}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
+                </div>
+                {chat.unread > 0 && (
+                  <span className="bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {chat.unread}
+                  </span>
+                )}
+              </button>
+            ))}
+        </ScrollArea>
       </div>
 
       {/* Chat Area */}
@@ -200,9 +281,7 @@ export function ChatPage() {
                 <div
                   key={message.id}
                   className={`flex ${
-                    message.sender_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca' 
-                      ? 'justify-end' 
-                      : 'justify-start'
+                    message.sender_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca' ? 'justify-end' : 'justify-start'
                   } space-x-4`}
                 >
                   <div
