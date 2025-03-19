@@ -130,7 +130,7 @@ export function ChatPage() {
           const messagesData = await getUserMessages(conversation.id);
           if (messagesData.length > 0) {
             // Ordenar mensajes por fecha y tomar el último
-            const sortedMessages = messagesData.sort((a, b) => 
+            const sortedMessages = messagesData.sort((a: any, b: any) => 
               new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
             );
             lastMessagesMap[conversation.id] = sortedMessages[0];
