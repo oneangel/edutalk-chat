@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Plus, Check, Clock, MessageSquare, Loader2 } from "lucide-react";
-import { getUserMessages } from "@/lib/messages";
+import { getUserMessages, updateAllMessagesState, updateMessageState } from "@/lib/messages";
 import { Message, Conversation } from "@/lib/types";
 import { getUserConversations } from "@/lib/conversations";
 import { jwtDecode } from "jwt-decode";
@@ -231,11 +231,20 @@ export function ChatPage() {
   useEffect(() => {
     if (!currentChat) return;
 
+    const updateMessages = async () => {
+      try {
+        await updateAllMessagesState(userId, currentChat.id);
+      } catch (error) {
+        console.error("Error fetching messages:", error);
+      }
+    };
+
     const fetchMessages = async () => {
       try {
         const messagesData = await getUserMessages(currentChat.id);
-        setMessages(messagesData);
-        setFilteredMessages(messagesData); // Inicializar los mensajes filtrados
+        const sortedMessages = messagesData.sort((a: any, b: any) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+        setMessages(sortedMessages);
+        setFilteredMessages(sortedMessages);
         
         // Hacemos scroll al final después de cargar los mensajes
         setTimeout(scrollToBottom, 100);
@@ -244,6 +253,7 @@ export function ChatPage() {
       }
     };
 
+    updateMessages();
     fetchMessages();
 
     // Escuchar nuevos mensajes
@@ -256,6 +266,8 @@ export function ChatPage() {
         // Actualizar el último mensaje para esta conversación
         setLastMessages(prev => ({...prev, [currentChat.id]: newMessage}));
         
+        if(newMessage.sender_id != userId) updateMessageState(newMessage.id);
+
         // Hacer scroll hacia abajo cuando llega un nuevo mensaje
         setTimeout(scrollToBottom, 100);
       }
@@ -276,9 +288,28 @@ export function ChatPage() {
       );
     });
 
+    socket.on(`chat.messages.read.${currentChat.id}`, (data) => {
+      console.log("event:", data);
+      
+      const { user_id, state } = data;
+      
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.sender_id != user_id ? { ...msg, state } : msg
+        )
+      );
+    
+      setFilteredMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.sender_id != user_id ? { ...msg, state } : msg
+        )
+      );
+    });
+
     return () => {
       socket.off(`chat.conversation.${currentChat.id}`);
       socket.off("chat.message.state");
+      socket.off(`chat.messages.read.${currentChat.id}`);
     };
   }, [currentChat]);
 
