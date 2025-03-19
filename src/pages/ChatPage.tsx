@@ -49,6 +49,7 @@ export function ChatPage() {
   const [userId, setUserId] = useState("");
   const [token, setToken] = useState("");
   const [usersData, setUsersData] = useState<UserMapping>({});
+  const [lastMessages, setLastMessages] = useState<{[key: string]: Message}>({});
   
   // Estados para el modal de nueva conversación
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -108,6 +109,9 @@ export function ChatPage() {
         
         // Cargar usuarios con los que tenemos conversaciones
         await fetchUsersWithConversations(user_id, storedToken);
+        
+        // Obtener el último mensaje para cada conversación
+        await fetchLastMessagesForConversations(conversationsData, storedToken);
       } catch (error) {
         console.error("Error fetching conversations:", error);
       }
@@ -115,6 +119,33 @@ export function ChatPage() {
 
     fetchConversations();
   }, []);
+  
+  // Función para obtener el último mensaje de cada conversación
+  const fetchLastMessagesForConversations = async (conversations: Conversation[], token: string) => {
+    const lastMessagesMap: {[key: string]: Message} = {};
+    
+    try {
+      const fetchPromises = conversations.map(async (conversation) => {
+        try {
+          const messagesData = await getUserMessages(conversation.id);
+          if (messagesData.length > 0) {
+            // Ordenar mensajes por fecha y tomar el último
+            const sortedMessages = messagesData.sort((a, b) => 
+              new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
+            );
+            lastMessagesMap[conversation.id] = sortedMessages[0];
+          }
+        } catch (error) {
+          console.error(`Error fetching messages for conversation ${conversation.id}:`, error);
+        }
+      });
+      
+      await Promise.all(fetchPromises);
+      setLastMessages(lastMessagesMap);
+    } catch (error) {
+      console.error("Error fetching last messages:", error);
+    }
+  };
   
   // Función para obtener los datos de los usuarios con quienes se tiene conversación
   const fetchUsersWithConversations = async (userId: string, token: string) => {
@@ -221,6 +252,9 @@ export function ChatPage() {
       (newMessage) => {
         setMessages((prevMessages) => [...prevMessages, newMessage]);
         setFilteredMessages((prevMessages) => [...prevMessages, newMessage]); // Actualizar mensajes filtrados
+        
+        // Actualizar el último mensaje para esta conversación
+        setLastMessages(prev => ({...prev, [currentChat.id]: newMessage}));
         
         // Hacer scroll hacia abajo cuando llega un nuevo mensaje
         setTimeout(scrollToBottom, 100);
@@ -367,6 +401,10 @@ export function ChatPage() {
       }
 
       const data = await response.json();
+      
+      // Actualizar el último mensaje para esta conversación
+      setLastMessages(prev => ({...prev, [currentChat.id]: data}));
+      
       setNewMessage(""); // Limpiar el input
       socket.emit("chat.message", data); // Notificar a otros usuarios via WebSocket
       
@@ -515,6 +553,9 @@ export function ChatPage() {
                 : conversation.participant_one_id;
               
               const { name, firstLetter } = getUserInfo(otherParticipantId);
+              
+              // Obtener el último mensaje de esta conversación
+              const lastMessage = lastMessages[conversation.id];
                 
               return (
                 <button
@@ -534,12 +575,11 @@ export function ChatPage() {
                       <span className="font-medium">
                         {highlightText(name, searchTerm)}
                       </span>
-                      <span className="text-sm text-gray-500">
-                      {conversation.created_at.split("T")[0]}
-                      </span>
                     </div>
                     <p className="text-sm text-gray-500 truncate">
-                      Último mensaje...
+                      {lastMessage ? 
+                        (lastMessage.sender_id === userId ? "Tú: " : "") + lastMessage.content 
+                        : "No hay mensajes aún"}
                     </p>
                   </div>
                 </button>
