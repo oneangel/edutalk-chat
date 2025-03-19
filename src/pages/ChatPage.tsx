@@ -32,6 +32,7 @@ export function ChatPage() {
   const [messageSearchTerm, setMessageSearchTerm] = useState("");
   const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [userId, setUserId] = useState("");
 
   // Función para resaltar coincidencias
   const highlightText = (text: string, search: string) => {
@@ -61,9 +62,9 @@ export function ChatPage() {
       try {
         // Decodifica el token
         const decodedToken = jwtDecode(token) as { [key: string]: any };
-        const userId = decodedToken.id;
-
-        const conversationsData = await getUserConversations(userId, token);
+        setUserId(decodedToken.id);
+        const user_id = decodedToken.id;
+        const conversationsData = await getUserConversations(user_id, token);
         setConversations(conversationsData);
       } catch (error) {
         console.error("Error fetching conversations:", error);
@@ -244,7 +245,7 @@ export function ChatPage() {
               <div className="flex-1 text-left">
                 <div className="flex justify-between">
                   <span className="font-medium">
-                    {conversation.participant_one_id === '658b8f0e-4da1-46e4-ab9e-0558c5374dca'
+                    {conversation.participant_one_id === `${userId}`
                       ? conversation.participant_two_id
                       : conversation.participant_one_id}
                   </span>
@@ -291,7 +292,7 @@ export function ChatPage() {
                 <div
                   key={message.id}
                   className={`flex ${
-                    message.sender_id === "658b8f0e-4da1-46e4-ab9e-0558c5374dca"
+                    message.sender_id === `${userId}`
                       ? "justify-end"
                       : "justify-start"
                   } space-x-4`}
@@ -299,7 +300,7 @@ export function ChatPage() {
                   <div
                     className={`max-w-[70%] rounded-lg p-3 ${
                       message.sender_id ===
-                      "658b8f0e-4da1-46e4-ab9e-0558c5374dca"
+                      `${userId}`
                         ? "bg-purple-600 text-white"
                         : "bg-gray-100 text-gray-900"
                     }`}
@@ -314,7 +315,7 @@ export function ChatPage() {
                           .join(":")}
                       </span>
                       {message.sender_id ===
-                        "658b8f0e-4da1-46e4-ab9e-0558c5374dca" && (
+                        `${userId}` && (
                         <MessageStatus state={message.state} />
                       )}
                     </div>
