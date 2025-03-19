@@ -1,4 +1,4 @@
-export async function getUserMessages() {
+export async function getUserMessages(conversation_id: string) {
     const token = localStorage.getItem('token');
   
     if (!token) {
@@ -6,7 +6,7 @@ export async function getUserMessages() {
     }
   
     const response = await fetch(
-      'https://edutalk-by8w.onrender.com/api/message/conversation/af72a86f-f097-4d46-8415-60df848a0520',
+      `https://edutalk-by8w.onrender.com/api/message/conversation/${conversation_id}`,
       {
           method: 'GET',
           headers: {
