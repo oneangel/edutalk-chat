@@ -57,9 +57,9 @@ export function HomePage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {quickActions.map((action) => (
-          <Card key={action.to} className="hover:shadow-lg transition-shadow">
+          <Card key={action.to} className="transition-shadow hover:shadow-lg">
             <CardHeader className="space-y-1">
               <div className={`w-12 h-12 rounded-lg ${action.color} flex items-center justify-center mb-2`}>
                 <action.icon className="w-6 h-6 text-white" />
@@ -69,7 +69,7 @@ export function HomePage() {
             </CardHeader>
             <CardContent>
               <Link to={action.to}>
-                <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                <Button className="w-full bg-gradient-to-r from-emerald-700 to-emerald-500 hover:from-emerald-800 hover:to-emerald-700">
                   Acceder
                 </Button>
               </Link>

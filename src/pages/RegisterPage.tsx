@@ -14,7 +14,7 @@ export function RegisterPage() {
         <span className="text-sm text-muted-foreground">
           ¿Ya tienes una cuenta?{" "}
           <Link to="/login">
-            <Button variant="link" className="p-0 text-purple-600 hover:text-purple-700">
+            <Button variant="link" className="p-0 from-emerald-700 to-emerald-500">
               Iniciar sesión
             </Button>
           </Link>

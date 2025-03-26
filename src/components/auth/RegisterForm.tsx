@@ -72,8 +72,8 @@ export function RegisterForm() {
               <FormLabel>Nombre de usuario</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input placeholder="usuario123" {...field} className="border-purple-100 pl-10" />
+                  <User className="absolute w-4 h-4 text-gray-500 -translate-y-1/2 left-3 top-1/2" />
+                  <Input placeholder="usuario123" {...field} className="pl-10 border-purple-100" />
                 </div>
               </FormControl>
               <FormMessage />
@@ -89,8 +89,8 @@ export function RegisterForm() {
                 <FormLabel>Nombre</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <UserCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                    <Input placeholder="Juan" {...field} className="border-purple-100 pl-10" />
+                    <UserCircle2 className="absolute w-4 h-4 text-gray-500 -translate-y-1/2 left-3 top-1/2" />
+                    <Input placeholder="Juan" {...field} className="pl-10 border-purple-100" />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -105,8 +105,8 @@ export function RegisterForm() {
                 <FormLabel>Apellido</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <UserCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                    <Input placeholder="Pérez" {...field} className="border-purple-100 pl-10" />
+                    <UserCircle2 className="absolute w-4 h-4 text-gray-500 -translate-y-1/2 left-3 top-1/2" />
+                    <Input placeholder="Pérez" {...field} className="pl-10 border-purple-100" />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -122,8 +122,8 @@ export function RegisterForm() {
               <FormLabel>Correo electrónico</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input placeholder="ejemplo@correo.com" {...field} className="border-purple-100 pl-10" />
+                  <Mail className="absolute w-4 h-4 text-gray-500 -translate-y-1/2 left-3 top-1/2" />
+                  <Input placeholder="ejemplo@correo.com" {...field} className="pl-10 border-purple-100" />
                 </div>
               </FormControl>
               <FormMessage />
@@ -138,24 +138,24 @@ export function RegisterForm() {
               <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
+                  <Lock className="absolute w-4 h-4 text-gray-500 -translate-y-1/2 left-3 top-1/2" />
                   <Input 
                     type={showPassword ? "text" : "password"} 
                     placeholder="••••••••" 
                     {...field} 
-                    className="border-purple-100 pl-10 pr-10" 
+                    className="pl-10 pr-10 border-purple-100" 
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-1/2 -translate-y-1/2 hover:bg-transparent"
+                    className="absolute right-0 -translate-y-1/2 top-1/2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
+                      <EyeOff className="w-4 h-4 text-gray-500" />
                     ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
+                      <Eye className="w-4 h-4 text-gray-500" />
                     )}
                   </Button>
                 </div>
@@ -190,7 +190,7 @@ export function RegisterForm() {
         />
         <Button 
           type="submit" 
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white" 
+          className="w-full text-white bg-gradient-to-r from-emerald-700 to-emerald-500 hover:from-emerald-800 hover:to-emerald-700" 
           disabled={isLoading}
         >
           {isLoading ? "Creando cuenta..." : "Crear cuenta"}

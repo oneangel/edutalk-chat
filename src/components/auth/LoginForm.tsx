@@ -140,7 +140,7 @@ export function LoginForm() {
         />
         <Button 
           type="submit" 
-          className="w-full text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700" 
+          className="w-full text-white bg-gradient-to-r from-emerald-700 to-emerald-500 hover:from-emerald-800 hover:to-emerald-700" 
           disabled={isLoading || !form.watch("recaptcha")}
         >
           {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}

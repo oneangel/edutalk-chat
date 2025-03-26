@@ -5,11 +5,12 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { HomePage } from '@/pages/HomePage';
 import { ChatPage } from '@/pages/ChatPage';
-import { CoursesPage } from '@/pages/CoursesPage';
 import { AssignmentsPage } from '@/pages/AssignmentsPage';
 import { GradesPage } from '@/pages/GradesPage';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { Layout } from '@/components/Layout';
+import { ClassesPage } from '@/pages/ClassesPage';
+import { AssignmentDetailPage } from '@/pages/AssignmentDetailPage';
 
 function App() {
   return (
@@ -27,8 +28,9 @@ function App() {
         >
           <Route index element={<HomePage />} />
           <Route path="chat" element={<ChatPage />} />
-          <Route path="cursos" element={<CoursesPage />} />
+          <Route path="clases" element={<ClassesPage />} />
           <Route path="tareas" element={<AssignmentsPage />} />
+          <Route path="tareas/:id" element={<AssignmentDetailPage />} />
           <Route path="calificaciones" element={<GradesPage />} />
           <Route path="calendario" element={<CalendarPage />} />
         </Route>
@@ -39,4 +41,4 @@ function App() {
   );
 }
 
-export default App;
+export default App

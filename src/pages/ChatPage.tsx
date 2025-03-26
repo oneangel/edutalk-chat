@@ -460,8 +460,8 @@ export function ChatPage() {
       case "seen":
         return (
           <div className="flex">
-            <Check className="w-4 h-4 text-blue-500" />
-            <Check className="w-4 h-4 -ml-2 text-blue-500" />
+            <Check className="w-4 h-4 text-sky-300" />
+            <Check className="w-4 h-4 -ml-2 text-sky-300" />
           </div>
         );
       default:
@@ -677,7 +677,7 @@ export function ChatPage() {
                   <div
                     className={`max-w-[70%] rounded-lg p-3 ${
                       message.sender_id === userId
-                        ? "bg-purple-600 text-white"
+                        ? "bg-emerald-700 text-white"
                         : "bg-gray-100 text-gray-900"
                     }`}
                   >

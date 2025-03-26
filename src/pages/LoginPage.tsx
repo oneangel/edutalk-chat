@@ -14,7 +14,7 @@ export function LoginPage() {
         <span className="text-sm text-muted-foreground">
           ¿No tienes una cuenta?{" "}
           <Link to="/register">
-            <Button variant="link" className="p-0 text-purple-600 hover:text-purple-700">
+            <Button variant="link" className="p-0 text-emerald-700 hover:text-emerald-500">
               Crear una
             </Button>
           </Link>
