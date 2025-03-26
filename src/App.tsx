@@ -11,6 +11,7 @@ import { CalendarPage } from '@/pages/CalendarPage';
 import { Layout } from '@/components/Layout';
 import { ClassesPage } from '@/pages/ClassesPage';
 import { AssignmentDetailPage } from '@/pages/AssignmentDetailPage';
+import { CourseDetailsPage } from './pages/CourseDetailsPage';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
           <Route path="tareas/:id" element={<AssignmentDetailPage />} />
           <Route path="calificaciones" element={<GradesPage />} />
           <Route path="calendario" element={<CalendarPage />} />
+          <Route path="clases/:id" element={<CourseDetailsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

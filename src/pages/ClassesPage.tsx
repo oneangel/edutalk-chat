@@ -380,6 +380,10 @@ export function ClassesPage() {
             <Card
               key={classItem.id}
               className="overflow-hidden transition-shadow hover:shadow-lg"
+              onClick={() => {
+                if (userType === "teacher")
+                  navigate(`/clases/${classItem.id}`);
+              }}
             >
               <div
                 className="h-32 bg-center bg-cover"
