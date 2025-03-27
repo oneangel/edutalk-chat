@@ -25,11 +25,13 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 
+  const data = await response.json(); 
+  
   if (!response.ok) {
-    throw new Error('Invalid credentials');
+    throw new Error(data.error || 'Invalid credentials');
   }
 
-  return response.json();
+  return data;
 }
 
 export async function register(data: {

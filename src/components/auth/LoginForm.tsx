@@ -51,19 +51,25 @@ export function LoginForm() {
         description: "Has iniciado sesión correctamente",
       });
       navigate("/chat");
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Credenciales inválidas",
-      });
-      // Reset recaptcha on error
-      if (recaptchaRef.current) {
-        (recaptchaRef.current as any).reset();
-        form.setValue("recaptcha", "");
+    } catch (error: any) {
+      console.log("Mensaje de error:", error.message); // Verificar en consola
+      
+      if (error.message === "Ya hay una sesión") {
+        toast({
+          variant: "destructive",
+          title: "Sesión activa",
+          description: "Ya existe una sesión abierta en otro dispositivo",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message || "Credenciales inválidas", // Usar mensaje original
+        });
       }
     } finally {
       setIsLoading(false);
+      form.resetField("recaptcha");
     }
   }
 

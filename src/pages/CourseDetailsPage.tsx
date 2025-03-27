@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, Paperclip, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Assignment {
   id: string;
@@ -39,6 +40,7 @@ export function CourseDetailsPage() {
     useState<string>("");
   const [deliveryDate, setDeliveryDate] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // Cambiado a array
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -302,7 +304,8 @@ export function CourseDetailsPage() {
         course.assignments.map((assignment) => (
           <div
             key={assignment.id}
-            className="bg-white p-4 rounded-lg shadow-md"
+            className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-50"
+            onClick={() => navigate(`/tareas/${assignment.id}`)} // Esta línea corregida
           >
             <div className="border-b py-2">
               <h3 className="font-semibold text-lg">{assignment.title}</h3>
@@ -325,16 +328,17 @@ export function CourseDetailsPage() {
                 <>
                   
                   {assignment.file_url.map((url, index) => (
-                    <div className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50">
+                    <div 
+                    key={`file-${assignment.id}-${index}`} // Key única aquí
+                    className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
+                  >
                     <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
-                    <div key={index}>
-                      <a href={url} target="_blank" rel="noopener noreferrer">
-                        Archivo {index + 1}
-                      </a>
-                    </div>
-                    </div>
-                    
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      Archivo {index + 1}
+                    </a>
+                  </div>
                   ))}
+
                 </>
               )}
             </div>
