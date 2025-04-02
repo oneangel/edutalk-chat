@@ -29,3 +29,34 @@ export interface Message {
   state: 'pending' | 'unread' | 'seen';
   status: boolean;
 }
+
+export interface Comment {
+  id: string;
+  author: string;
+  content: string;
+  timestamp: string;
+  avatar: string;
+}
+
+export interface Assignment {
+  id: string;
+  title: string;
+  course_id: string;
+  delivery_date: string;
+  status: boolean;
+  description: string;
+  courseName: string;
+  teacherName: string;
+}
+
+export interface Submission {
+  id: string;
+  student_id: string;
+  student?: User; 
+  file_url: string;
+  grade: number | null;
+  createdAt: string;
+  status: 'pending' | 'submitted' | 'late' | 'graded';
+}
+
+export type UserType = "student" | "teacher";
