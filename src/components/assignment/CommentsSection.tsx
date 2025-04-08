@@ -10,15 +10,21 @@ interface CommentsSectionProps {
   comments: Comment[];
   comment: string;
   setComment: (comment: string) => void;
+  onCommentSubmit: () => void;
 }
 
-export function CommentsSection({ comments, comment, setComment }: CommentsSectionProps) {
-    const handleCommentSubmit = () => {
-        if (comment.trim()) {
-          console.log("New comment:", comment);
-          setComment("");
-        }
-      };
+export function CommentsSection({ 
+  comments, 
+  comment, 
+  setComment,
+  onCommentSubmit 
+}: CommentsSectionProps) {
+  const handleCommentSubmit = () => {
+    if (comment.trim()) {
+      onCommentSubmit();
+      setComment("");
+    }
+  };
 
   return (
     <Card>
@@ -51,7 +57,13 @@ export function CommentsSection({ comments, comment, setComment }: CommentsSecti
                   <div className="flex items-center space-x-2">
                     <span className="font-medium">{comment.author}</span>
                     <span className="text-sm text-gray-500">
-                      {new Date(comment.timestamp).toLocaleDateString("es-ES")}
+                      {new Date(comment.timestamp).toLocaleDateString("es-ES", {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </span>
                   </div>
                   <p className="mt-1 text-gray-600">{comment.content}</p>

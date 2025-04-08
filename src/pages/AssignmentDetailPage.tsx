@@ -3,132 +3,178 @@ import { useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { useToast } from "@/hooks/use-toast";
 import { Assignment, Comment, Submission, User, UserType } from "@/lib/types";
-import { TeacherView } from "../components/TeacherView";
-import { StudentView } from "../components/StudentView";
+import { TeacherView } from "../components/assignment/TeacherView";
+import { StudentView } from "../components/assignment/StudentView";
 
 export function AssignmentDetailPage() {
   const { id } = useParams();
+  const { toast } = useToast();
+  
+  // Estados principales
   const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [comment, setComment] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadedUrl, setUploadedUrl] = useState("");
-  const [submissionUploaded, setSubmissionUploaded] = useState(false);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [comment, setComment] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  
+  // Estados de carga
+  const [isLoading, setIsLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [submissionUploaded, setSubmissionUploaded] = useState(false);
+  
+  // Estados de usuario
   const [userType, setUserType] = useState<UserType>("student");
   const [tempGrades, setTempGrades] = useState<Record<string, number | null>>({});
-  const { toast } = useToast();
 
   useEffect(() => {
-  const fetchAssignment = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-    
-    const decodedToken = jwtDecode(token) as { [key: string]: any };
-    setUserType(decodedToken.type);   
+    const fetchAssignment = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-    try {
-      // Obtener datos de la tarea
-      const response = await fetch(
-        `https://edutalk-by8w.onrender.com/api/assignment/${id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.ok) {
-        const assignmentData = await response.json();
+      const decodedToken = jwtDecode(token) as { [key: string]: any };
+      setUserType(decodedToken.type);
+
+      try {
+        // Fetch assignment data
+        const assignmentRes = await fetch(
+          `https://edutalk-by8w.onrender.com/api/assignment/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (!assignmentRes.ok) throw new Error("Error fetching assignment");
+        const assignmentData = await assignmentRes.json();
         setAssignment(assignmentData);
 
-        // Si es profesor, obtener todas las entregas
+        // Fetch comments
+        const commentsRes = await fetch(
+          `https://edutalk-by8w.onrender.com/api/comments/assignment/${id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (commentsRes.ok) {
+          setComments(await commentsRes.json());
+        }
+
+        // Teacher-specific fetches
         if (decodedToken.type === "teacher") {
-          const submissionsResponse = await fetch(
+          const submissionsRes = await fetch(
             `https://edutalk-by8w.onrender.com/api/submission/assignment/${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
-          if (submissionsResponse.ok) {
-            const submissionsData = await submissionsResponse.json();
-            
-            // Enriquecer los datos con información de estudiantes y status
+          if (submissionsRes.ok) {
+            const submissionsData = await submissionsRes.json();
             const enrichedSubmissions = await Promise.all(
               submissionsData.map(async (sub: any) => {
-                // Obtener información del estudiante (simulado ya que tu backend no lo provee)
                 const studentInfo = await fetchStudentInfo(sub.student_id, token);
-                
-                // Determinar el status
-                let status: 'pending' | 'submitted' | 'late' | 'graded' = 'submitted';
-                if (sub.calification !== null) status = 'graded';
-                else if (new Date(sub.createdAt) > new Date(assignmentData.delivery_date)) {
-                  status = 'late';
-                }
-
-                return {
-                  ...sub,
-                  student: studentInfo,
-                  status
-                };
+                const status = getSubmissionStatus(sub, assignmentData.delivery_date);
+                return { ...sub, student: studentInfo, status };
               })
             );
-            
             setSubmissions(enrichedSubmissions);
           }
-        }
-        // Si es estudiante, obtener su entrega
-        else {
-          const submissionResponse = await fetch(
+        } else {
+          // Student-specific fetch
+          const submissionRes = await fetch(
             `https://edutalk-by8w.onrender.com/api/submission/student/${decodedToken.id}/assignment/${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
-          if (submissionResponse.ok) {
-            const submissionData = await submissionResponse.json();
+          if (submissionRes.ok) {
+            const submissionData = await submissionRes.json();
             if (submissionData) {
-              let status: 'pending' | 'submitted' | 'late' | 'graded' = 'submitted';
-              if (submissionData.calification !== null) status = 'graded';
-              else if (new Date(submissionData.createdAt) > new Date(assignmentData.delivery_date)) {
-                status = 'late';
-              }
-
               setSubmission({
                 ...submissionData,
-                status
+                status: getSubmissionStatus(submissionData, assignmentData.delivery_date)
               });
             }
           }
         }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Error al cargar los datos",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  async function fetchStudentInfo(studentId: string, token: string): Promise<User | null> {
-    try {
-      const response = await fetch(
-        `https://edutalk-by8w.onrender.com/api/student/${studentId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.ok) {
-        return await response.json();
+    const getSubmissionStatus = (sub: any, deliveryDate: string) => {
+      if (sub.calification !== null) return 'graded';
+      return new Date(sub.createdAt) > new Date(deliveryDate) ? 'late' : 'submitted';
+    };
+
+    const fetchStudentInfo = async (studentId: string, token: string): Promise<User | null> => {
+      try {
+        const res = await fetch(
+          `https://edutalk-by8w.onrender.com/api/student/${studentId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        return res.ok ? await res.json() : null;
+      } catch (error) {
+        console.error("Error fetching student info:", error);
+        return null;
       }
-      return null;
-    } catch (error) {
-      console.error("Error fetching student info:", error);
-      return null;
-    }
-  }
-  
+    };
+
     if (id) fetchAssignment();
   }, [id, submissionUploaded]);
 
+  // Función para enviar comentarios
+  const handleCommentSubmit = async () => {
+    if (!comment.trim()) return;
+
+    const token = localStorage.getItem("token");
+    if (!token || !id) return;
+
+    try {
+      const decodedToken = jwtDecode(token) as { id: string; name: string; avatar?: string };
+      
+      const response = await fetch("https://edutalk-by8w.onrender.com/api/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          assignmentId: id,
+          content: comment.trim(),
+          authorId: decodedToken.id
+        }),
+      });
+
+      if (response.ok) {
+        const newComment = await response.json();
+        setComments(prev => [...prev, {
+          ...newComment,
+          author: decodedToken.name,
+          avatar: decodedToken.avatar || "https://i.pravatar.cc/150?img=3"
+        }]);
+        setComment("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error al publicar el comentario",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Función para formatear fechas
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("es-ES", {
+      day: "2-digit",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  };
+
+  // Resto de funciones existentes (handleGradeUpdate, handleSubmit)
   const handleGradeUpdate = async (submissionId: string, newGrade: number | null) => {
     try {
       const token = localStorage.getItem("token");
@@ -140,21 +186,14 @@ export function AssignmentDetailPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ 
-            grade: newGrade,  // Usar grade en lugar de calification
-            status: newGrade !== null ? 'graded' : 'submitted'
-          }),
+          body: JSON.stringify({ grade: newGrade }),
         }
       );
   
       if (response.ok) {
-        const updatedSubmission = await response.json();
+        const updated = await response.json();
         setSubmissions(prev => prev.map(sub => 
-          sub.id === submissionId ? {
-            ...sub,
-            grade: updatedSubmission.grade,
-            status: updatedSubmission.grade !== null ? 'graded' : 'submitted'
-          } : sub
+          sub.id === submissionId ? { ...sub, grade: updated.grade, status: 'graded' } : sub
         ));
       }
     } catch (error) {
@@ -176,22 +215,11 @@ export function AssignmentDetailPage() {
     if (!token) return;
 
     try {
-      const decodedToken = jwtDecode(token) as { id: string };
-      // ... (mantener la lógica original de subida de archivos)
+      // Lógica existente de subida de archivos
       setSubmissionUploaded(true);
     } finally {
       setUploading(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("es-ES", {
-      day: "2-digit",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
   };
 
   return (
@@ -216,6 +244,7 @@ export function AssignmentDetailPage() {
           setComment={setComment}
           setSelectedFile={setSelectedFile}
           handleSubmit={handleSubmit}
+          onCommentSubmit={handleCommentSubmit}
         />
       )}
     </div>

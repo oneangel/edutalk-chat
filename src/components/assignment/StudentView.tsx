@@ -1,4 +1,3 @@
-// src/pages/AssignmentDetailPage/components/StudentView.tsx
 import { Assignment, Comment, Submission } from "@/lib/types";
 import { AssignmentDetails } from "./AssignmentDetails";
 import { CommentsSection } from "./CommentsSection";
@@ -17,6 +16,7 @@ interface StudentViewProps {
   setComment: (comment: string) => void;
   setSelectedFile: (file: File | null) => void;
   handleSubmit: () => Promise<void>;
+  onCommentSubmit: () => void;
 }
 
 export function StudentView({
@@ -30,7 +30,8 @@ export function StudentView({
   formatDate,
   setComment,
   setSelectedFile,
-  handleSubmit
+  handleSubmit,
+  onCommentSubmit
 }: StudentViewProps) {
   return (
     <>
@@ -54,6 +55,7 @@ export function StudentView({
           comments={comments}
           comment={comment}
           setComment={setComment}
+          onCommentSubmit={onCommentSubmit}
         />
       </div>
       
