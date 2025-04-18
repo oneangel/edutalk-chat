@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, Paperclip, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 interface Assignment {
   id: string;
@@ -41,12 +42,50 @@ export function CourseDetailsPage() {
   const [deliveryDate, setDeliveryDate] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // Cambiado a array
   const navigate = useNavigate();
+  const [userType, setUserType] = useState("");
 
   useEffect(() => {
-    const fetchAssignments = async () => {
+    const fetchCourseAndAssignments = async () => {
       try {
-        const token = localStorage.getItem("token"); // Se asume que el token se almacena en localStorage
-        const response = await fetch(
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found");
+          return;
+        }
+
+        const decodedToken = jwtDecode(token) as { [key: string]: any };
+        const userType = decodedToken.type;
+        setUserType(userType);
+
+        // 1. Obtener información del curso
+        const courseResponse = await fetch(
+          `https://edutalk-by8w.onrender.com/api/course/${id}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!courseResponse.ok) {
+          throw new Error("Error al obtener la información del curso");
+        }
+
+        const courseData = await courseResponse.json();
+
+        // Setea el curso sin tareas aún
+        setCourse({
+          id: id!,
+          name: courseData.name,
+          description: courseData.description || "",
+          code: courseData.code || "",
+          assignments: [],
+        });
+
+        // 2. Obtener tareas del curso
+        const assignmentsResponse = await fetch(
           `https://edutalk-by8w.onrender.com/api/assignment/course/${id}`,
           {
             method: "GET",
@@ -57,24 +96,25 @@ export function CourseDetailsPage() {
           }
         );
 
-        if (!response.ok) {
-          throw new Error("Error al obtener las tareas");
+        if (!assignmentsResponse.ok) {
+          throw new Error("Error al obtener las tareas del curso");
         }
 
-        const assignments = await response.json();
-        setCourse({
-          id: id!,
-          name: "Matemáticas Avanzadas", // Esto debería venir del backend si la API lo soporta
-          description: "Curso sobre cálculo y álgebra avanzada.",
-          code: "MAT-2024",
-          assignments,
-        });
+        const assignmentsData = await assignmentsResponse.json();
+
+        // Actualiza el estado del curso con las tareas
+        setCourse((prevCourse) => ({
+          ...prevCourse!,
+          assignments: assignmentsData,
+        }));
       } catch (error) {
         console.error(error);
       }
     };
 
-    fetchAssignments();
+    if (id) {
+      fetchCourseAndAssignments();
+    }
   }, [id]);
 
   const handleCreateAssignment = async () => {
@@ -202,9 +242,6 @@ export function CourseDetailsPage() {
       {/* Encabezado */}
       <div className="relative bg-black text-white text-3xl font-bold flex items-center justify-center h-40 rounded-lg shadow-md">
         {course.name}
-        <button className="absolute top-4 right-4 text-sm bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded">
-          Personalizar
-        </button>
       </div>
 
       {/* Información de la clase */}
@@ -305,7 +342,13 @@ export function CourseDetailsPage() {
           <div
             key={assignment.id}
             className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-50"
-            onClick={() => navigate(`/tareas/${assignment.id}`)} // Esta línea corregida
+            onClick={() => {
+              navigate(
+                userType === "teacher"
+                  ? `/tareas/${assignment.id}`
+                  : `/tareas/${assignment.id}`
+              );
+            }}
           >
             <div className="border-b py-2">
               <h3 className="font-semibold text-lg">{assignment.title}</h3>
@@ -326,19 +369,17 @@ export function CourseDetailsPage() {
 
               {assignment.file_url && assignment.file_url.length > 0 && (
                 <>
-                  
                   {assignment.file_url.map((url, index) => (
-                    <div 
-                    key={`file-${assignment.id}-${index}`} // Key única aquí
-                    className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
-                  >
-                    <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
-                    <a href={url} target="_blank" rel="noopener noreferrer">
-                      Archivo {index + 1}
-                    </a>
-                  </div>
+                    <div
+                      key={`file-${assignment.id}-${index}`} // Key única aquí
+                      className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
+                    >
+                      <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        Archivo {index + 1}
+                      </a>
+                    </div>
                   ))}
-
                 </>
               )}
             </div>

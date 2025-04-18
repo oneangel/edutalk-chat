@@ -60,6 +60,7 @@ export function LoginForm() {
           title: "Sesión activa",
           description: "Ya existe una sesión abierta en otro dispositivo",
         });
+        navigate("/login");
       } else {
         toast({
           variant: "destructive",

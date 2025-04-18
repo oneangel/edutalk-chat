@@ -51,7 +51,7 @@ export function ClassesPage() {
   const [userId, setUserId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+
   const navigate = useNavigate();
   const [userType, setUserType] = useState("");
 
@@ -184,32 +184,6 @@ export function ClassesPage() {
     }
   };
 
-  // Función para obtener las tareas de un curso
-  const fetchAssignments = async (courseId: string) => {
-    const storedToken = localStorage.getItem("token");
-    if (!storedToken) {
-      console.error("No token found");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `https://edutalk-by8w.onrender.com/api/assignment/course/${courseId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      setAssignments(data || []);
-    } catch (error) {
-      console.error("Error fetching assignments:", error);
-    }
-  };
-
   // Función para unirse a una clase
   const handleJoinClass = async () => {
     if (!classCode) {
@@ -291,13 +265,6 @@ export function ClassesPage() {
       console.error("Error fetching conversations:", error);
     }
   }, []);
-
-  // useEffect para obtener las tareas cuando se cambia a la pestaña de asignaciones
-  useEffect(() => {
-    if (selectedCourseId) {
-      fetchAssignments(selectedCourseId);
-    }
-  }, [selectedCourseId]);
 
   return (
     <div className="space-y-6">
@@ -381,78 +348,16 @@ export function ClassesPage() {
               key={classItem.id}
               className="overflow-hidden transition-shadow hover:shadow-lg"
               onClick={() => {
-                if (userType === "teacher")
-                  navigate(`/clases/${classItem.id}`);
+                navigate(`/clases/${classItem.id}`);
               }}
             >
-              <div
-                className="h-32 bg-center bg-cover"
-                style={{ backgroundImage: `url('default-image-url')` }}
-              />
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="info">Información</TabsTrigger>
-                  <TabsTrigger
-                    value="assignments"
-                    onClick={() => setSelectedCourseId(classItem.id)}
-                  >
-                    Tareas
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="info">
-                  <CardHeader>
-                    <CardTitle className="text-xl">{classItem.name}</CardTitle>
-                    <CardDescription>{classItem.description}</CardDescription>
-                  </CardHeader>
-                </TabsContent>
-                <TabsContent value="assignments">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-xl">
-                      <ClipboardList className="w-5 h-5 mr-2" />
-                      Tareas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {assignments.length === 0 ? (
-                        <p className="text-center text-gray-500">
-                          No hay tareas para este curso.
-                        </p>
-                      ) : (
-                        assignments.map((assignment) => (
-                          <Card
-                            key={assignment.id}
-                            className="transition-shadow cursor-pointer hover:shadow-md"
-                            onClick={() => {
-                              navigate(`/tareas/${assignment.id}`);
-                            }}
-                          >
-                            <CardHeader className="p-4">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-base">
-                                  {assignment.title}
-                                </CardTitle>
-                                <Badge
-                                  variant="secondary"
-                                  className={getStatusColor(assignment.status)}
-                                >
-                                  {getStatusText(assignment.status)}
-                                </Badge>
-                              </div>
-                              <CardDescription className="text-xs">
-                                Entrega:{" "}
-                                {new Date(
-                                  assignment.delivery_date
-                                ).toLocaleDateString()}
-                              </CardDescription>
-                            </CardHeader>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
-                </TabsContent>
-              </Tabs>
+              <div className="relative bg-black text-white text-3xl font-bold flex items-center justify-center h-40 rounded-lg">
+                {classItem.name}
+              </div>
+              <CardHeader>
+                <CardTitle className="text-xl">{classItem.description}</CardTitle>
+                <CardDescription>Codigo de la clase: {classItem.code}</CardDescription>
+              </CardHeader>
             </Card>
           ))}
         </div>

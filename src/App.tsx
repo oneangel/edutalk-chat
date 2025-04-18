@@ -12,6 +12,7 @@ import { Layout } from '@/components/Layout';
 import { ClassesPage } from '@/pages/ClassesPage';
 import { AssignmentDetailPage } from '@/pages/AssignmentDetailPage';
 import { CourseDetailsPage } from './pages/CourseDetailsPage';
+import { SubmissionsPage } from './pages/SubmissionsPage';
 
 function App() {
   return (

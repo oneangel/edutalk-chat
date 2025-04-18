@@ -9,7 +9,7 @@ import { StudentView } from "../components/assignment/StudentView";
 export function AssignmentDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
-  
+
   // Estados principales
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
@@ -17,15 +17,17 @@ export function AssignmentDetailPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [comment, setComment] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  
+
   // Estados de carga
   const [isLoading, setIsLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [submissionUploaded, setSubmissionUploaded] = useState(false);
-  
+
   // Estados de usuario
   const [userType, setUserType] = useState<UserType>("student");
-  const [tempGrades, setTempGrades] = useState<Record<string, number | null>>({});
+  const [tempGrades, setTempGrades] = useState<Record<string, number | null>>(
+    {}
+  );
 
   useEffect(() => {
     const fetchAssignment = async () => {
@@ -41,7 +43,7 @@ export function AssignmentDetailPage() {
           `https://edutalk-by8w.onrender.com/api/assignment/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        
+
         if (!assignmentRes.ok) throw new Error("Error fetching assignment");
         const assignmentData = await assignmentRes.json();
         setAssignment(assignmentData);
@@ -61,13 +63,19 @@ export function AssignmentDetailPage() {
             `https://edutalk-by8w.onrender.com/api/submission/assignment/${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          
+
           if (submissionsRes.ok) {
             const submissionsData = await submissionsRes.json();
             const enrichedSubmissions = await Promise.all(
               submissionsData.map(async (sub: any) => {
-                const studentInfo = await fetchStudentInfo(sub.student_id, token);
-                const status = getSubmissionStatus(sub, assignmentData.delivery_date);
+                const studentInfo = await fetchStudentInfo(
+                  sub.student_id,
+                  token
+                );
+                const status = getSubmissionStatus(
+                  sub,
+                  assignmentData.delivery_date
+                );
                 return { ...sub, student: studentInfo, status };
               })
             );
@@ -79,13 +87,16 @@ export function AssignmentDetailPage() {
             `https://edutalk-by8w.onrender.com/api/submission/student/${decodedToken.id}/assignment/${id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          
+
           if (submissionRes.ok) {
             const submissionData = await submissionRes.json();
             if (submissionData) {
               setSubmission({
                 ...submissionData,
-                status: getSubmissionStatus(submissionData, assignmentData.delivery_date)
+                status: getSubmissionStatus(
+                  submissionData,
+                  assignmentData.delivery_date
+                ),
               });
             }
           }
@@ -102,11 +113,16 @@ export function AssignmentDetailPage() {
     };
 
     const getSubmissionStatus = (sub: any, deliveryDate: string) => {
-      if (sub.calification !== null) return 'graded';
-      return new Date(sub.createdAt) > new Date(deliveryDate) ? 'late' : 'submitted';
+      if (sub.calification !== null) return "graded";
+      return new Date(sub.createdAt) > new Date(deliveryDate)
+        ? "late"
+        : "submitted";
     };
 
-    const fetchStudentInfo = async (studentId: string, token: string): Promise<User | null> => {
+    const fetchStudentInfo = async (
+      studentId: string,
+      token: string
+    ): Promise<User | null> => {
       try {
         const res = await fetch(
           `https://edutalk-by8w.onrender.com/api/student/${studentId}`,
@@ -130,28 +146,38 @@ export function AssignmentDetailPage() {
     if (!token || !id) return;
 
     try {
-      const decodedToken = jwtDecode(token) as { id: string; name: string; avatar?: string };
-      
-      const response = await fetch("https://edutalk-by8w.onrender.com/api/comments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          assignmentId: id,
-          content: comment.trim(),
-          authorId: decodedToken.id
-        }),
-      });
+      const decodedToken = jwtDecode(token) as {
+        id: string;
+        name: string;
+        avatar?: string;
+      };
+
+      const response = await fetch(
+        "https://edutalk-by8w.onrender.com/api/comments",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            assignmentId: id,
+            content: comment.trim(),
+            authorId: decodedToken.id,
+          }),
+        }
+      );
 
       if (response.ok) {
         const newComment = await response.json();
-        setComments(prev => [...prev, {
-          ...newComment,
-          author: decodedToken.name,
-          avatar: decodedToken.avatar || "https://i.pravatar.cc/150?img=3"
-        }]);
+        setComments((prev) => [
+          ...prev,
+          {
+            ...newComment,
+            author: decodedToken.name,
+            avatar: decodedToken.avatar || "https://i.pravatar.cc/150?img=3",
+          },
+        ]);
         setComment("");
       }
     } catch (error) {
@@ -175,7 +201,10 @@ export function AssignmentDetailPage() {
   };
 
   // Resto de funciones existentes (handleGradeUpdate, handleSubmit)
-  const handleGradeUpdate = async (submissionId: string, newGrade: number | null) => {
+  const handleGradeUpdate = async (
+    submissionId: string,
+    newGrade: number | null
+  ) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
@@ -189,12 +218,16 @@ export function AssignmentDetailPage() {
           body: JSON.stringify({ grade: newGrade }),
         }
       );
-  
+
       if (response.ok) {
         const updated = await response.json();
-        setSubmissions(prev => prev.map(sub => 
-          sub.id === submissionId ? { ...sub, grade: updated.grade, status: 'graded' } : sub
-        ));
+        setSubmissions((prev) =>
+          prev.map((sub) =>
+            sub.id === submissionId
+              ? { ...sub, grade: updated.grade, status: "graded" }
+              : sub
+          )
+        );
       }
     } catch (error) {
       console.error("Error updating grade:", error);
@@ -227,9 +260,17 @@ export function AssignmentDetailPage() {
       {userType === "teacher" ? (
         <TeacherView
           assignment={assignment}
-          submissions={submissions}
-          handleGradeUpdate={handleGradeUpdate}
+          submission={submission}
+          isLoading={isLoading}
+          comments={comments}
+          comment={comment}
+          selectedFile={selectedFile}
+          uploading={uploading}
           formatDate={formatDate}
+          setComment={setComment}
+          setSelectedFile={setSelectedFile}
+          handleSubmit={handleSubmit}
+          onCommentSubmit={handleCommentSubmit}
         />
       ) : (
         <StudentView
