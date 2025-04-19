@@ -60,7 +60,7 @@ export function Navbar() {
       <div className="container px-4 mx-auto">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/" className="text-xl font-bold text-purple-600">
+            <Link to="/" className="text-xl font-bold text-emerald-600">
               EduTalk
             </Link>
             <div className="items-center hidden space-x-4 md:flex">
@@ -131,7 +131,7 @@ function NavLink({
   return (
     <Link
       to={to}
-      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-purple-600"
+      className="flex items-center space-x-2 text-gray-600 transition-colors hover:text-emerald-600"
     >
       {icon}
       <span>{children}</span>

@@ -361,7 +361,7 @@ export function CourseDetailsPage() {
               </p>
               <p
                 className={`text-sm font-semibold mt-2 ${
-                  assignment.status ? "text-green-600" : "text-red-600"
+                  assignment.status ? "text-emerald-600" : "text-red-600"
                 }`}
               >
                 {assignment.status ? "Activo" : "Inactivo"}

@@ -50,7 +50,7 @@ export function AssignmentDetailPage() {
 
         // Fetch comments
         const commentsRes = await fetch(
-          `https://edutalk-by8w.onrender.com/api/comments/assignment/${id}`,
+          `https://edutalk-by8w.onrender.com/api/assignment/${id}/comments`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (commentsRes.ok) {
@@ -60,7 +60,7 @@ export function AssignmentDetailPage() {
         // Teacher-specific fetches
         if (decodedToken.type === "teacher") {
           const submissionsRes = await fetch(
-            `https://edutalk-by8w.onrender.com/api/submission/assignment/${id}`,
+            `https://edutalk-by8w.onrender.com/api/assignment/${id}/submissions`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
@@ -84,7 +84,7 @@ export function AssignmentDetailPage() {
         } else {
           // Student-specific fetch
           const submissionRes = await fetch(
-            `https://edutalk-by8w.onrender.com/api/submission/student/${decodedToken.id}/assignment/${id}`,
+            `https://edutalk-by8w.onrender.com/api/assignment/${id}/submission`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
@@ -113,10 +113,35 @@ export function AssignmentDetailPage() {
     };
 
     const getSubmissionStatus = (sub: any, deliveryDate: string) => {
-      if (sub.calification !== null) return "graded";
-      return new Date(sub.createdAt) > new Date(deliveryDate)
-        ? "late"
-        : "submitted";
+      if (sub.calification !== null) return "revisado";
+      if (new Date(sub.createdAt) > new Date(deliveryDate)) return "tarde";
+      return "entregado";
+    };
+
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case "entregado":
+          return "bg-emerald-100 text-emerald-700";
+        case "tarde":
+          return "bg-amber-100 text-amber-700";
+        case "revisado":
+          return "bg-blue-100 text-blue-700";
+        default:
+          return "bg-gray-100 text-gray-700";
+      }
+    };
+
+    const getStatusText = (status: string) => {
+      switch (status) {
+        case "entregado":
+          return "Entregado";
+        case "tarde":
+          return "Entregado tarde";
+        case "revisado":
+          return "Revisado";
+        default:
+          return "Pendiente";
+      }
     };
 
     const fetchStudentInfo = async (
@@ -248,8 +273,73 @@ export function AssignmentDetailPage() {
     if (!token) return;
 
     try {
-      // Lógica existente de subida de archivos
+      // 1. Obtener la firma para Cloudinary
+      const signatureRes = await fetch(
+        "https://edutalk-by8w.onrender.com/api/auth/get-signature",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!signatureRes.ok) throw new Error("Error al obtener la firma");
+      const signatureData = await signatureRes.json();
+
+      // 2. Subir el archivo a Cloudinary
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("api_key", "965141632148366");
+      formData.append("timestamp", signatureData.timestamp);
+      formData.append("signature", signatureData.signature);
+      formData.append("folder", "tareas");
+
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/raw/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!cloudinaryRes.ok) throw new Error("Error al subir el archivo");
+      const cloudinaryData = await cloudinaryRes.json();
+
+      // 3. Crear la entrega
+      const decodedToken = jwtDecode(token) as { id: string };
+      const submissionRes = await fetch(
+        "https://edutalk-by8w.onrender.com/api/submission",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            student_id: decodedToken.id,
+            assignment_id: id,
+            file_url: cloudinaryData.secure_url,
+          }),
+        }
+      );
+
+      if (!submissionRes.ok) throw new Error("Error al crear la entrega");
+
+      toast({
+        title: "¡Éxito!",
+        description: "Tu tarea ha sido entregada correctamente",
+      });
+
       setSubmissionUploaded(true);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Hubo un error al entregar la tarea",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }

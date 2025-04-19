@@ -139,7 +139,7 @@ export function FileUploadSection({
 
           {!submission?.file_url && (
             <Button
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              className="w-full bg-gradient-to-r from-emerald-700 to-emerald-500 hover:from-emerald-800 hover:to-emerald-700 text-white"
               onClick={onSubmit}
               disabled={uploading || !selectedFile}
             >
