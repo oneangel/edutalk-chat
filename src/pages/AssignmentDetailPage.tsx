@@ -7,7 +7,7 @@ import { TeacherView } from "../components/assignment/TeacherView";
 import { StudentView } from "../components/assignment/StudentView";
 
 export function AssignmentDetailPage() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
 
   // Estados principales
@@ -25,16 +25,59 @@ export function AssignmentDetailPage() {
 
   // Estados de usuario
   const [userType, setUserType] = useState<UserType>("student");
-  const [tempGrades, setTempGrades] = useState<Record<string, number | null>>(
-    {}
-  );
+  const [tempGrades, setTempGrades] = useState<Record<string, number | null>>({});
+
+  const fetchComments = async (assignmentId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return [];
+  
+    try {
+      const response = await fetch(
+        `https://edutalk-by8w.onrender.com/api/comments/assignment/${assignmentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error obteniendo comentarios");
+      }
+  
+      const data = await response.json();
+      
+      // Validación de estructura de datos
+      if (!Array.isArray(data)) {
+        throw new Error("Formato de comentarios inválido");
+      }
+  
+      return data.map((comment: any) => ({
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        Author: comment.Author ? {
+          id: comment.Author.id,
+          name: comment.Author.name
+        } : null
+      })) as Comment[];
+      
+    } catch (error) {
+      console.error("Error obteniendo comentarios:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error 
+          ? error.message 
+          : "Error al cargar comentarios",
+        variant: "destructive",
+      });
+      return [];
+    }
+  };
 
   useEffect(() => {
     const fetchAssignment = async () => {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token || !id) return;
 
-      const decodedToken = jwtDecode(token) as { [key: string]: any };
+      const decodedToken = jwtDecode<{ [key: string]: any }>(token);
       setUserType(decodedToken.type);
 
       try {
@@ -49,13 +92,8 @@ export function AssignmentDetailPage() {
         setAssignment(assignmentData);
 
         // Fetch comments
-        const commentsRes = await fetch(
-          `https://edutalk-by8w.onrender.com/api/assignment/${id}/comments`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (commentsRes.ok) {
-          setComments(await commentsRes.json());
-        }
+        const loadedComments = await fetchComments(id);
+        setComments(loadedComments);
 
         // Teacher-specific fetches
         if (decodedToken.type === "teacher") {
@@ -118,32 +156,6 @@ export function AssignmentDetailPage() {
       return "entregado";
     };
 
-    const getStatusColor = (status: string) => {
-      switch (status) {
-        case "entregado":
-          return "bg-emerald-100 text-emerald-700";
-        case "tarde":
-          return "bg-amber-100 text-amber-700";
-        case "revisado":
-          return "bg-blue-100 text-blue-700";
-        default:
-          return "bg-gray-100 text-gray-700";
-      }
-    };
-
-    const getStatusText = (status: string) => {
-      switch (status) {
-        case "entregado":
-          return "Entregado";
-        case "tarde":
-          return "Entregado tarde";
-        case "revisado":
-          return "Revisado";
-        default:
-          return "Pendiente";
-      }
-    };
-
     const fetchStudentInfo = async (
       studentId: string,
       token: string
@@ -161,22 +173,41 @@ export function AssignmentDetailPage() {
     };
 
     if (id) fetchAssignment();
-  }, [id, submissionUploaded]);
+  }, [id, submissionUploaded, toast]);
 
-  // Función para enviar comentarios
   const handleCommentSubmit = async () => {
-    if (!comment.trim()) return;
-
+    if (!comment.trim()) {
+      toast({
+        title: "¡Atención!",
+        description: "El comentario no puede estar vacío",
+      });
+      return;
+    }
+  
     const token = localStorage.getItem("token");
     if (!token || !id) return;
-
+  
+    // Declarar tempComment fuera del bloque try para que sea accesible en el catch
+    let tempComment: Comment | null = null;
+  
     try {
-      const decodedToken = jwtDecode(token) as {
-        id: string;
-        name: string;
-        avatar?: string;
+      const decodedToken = jwtDecode<{ id: string }>(token);
+  
+      // Crear objeto temporal para actualización optimista
+      tempComment = {
+        id: `temp-${Date.now()}`,
+        content: comment.trim(),
+        createdAt: new Date().toISOString(),
+        Author: {
+          id: decodedToken.id,
+          name: "Tú"
+        }
       };
-
+  
+      // Actualización optimista
+      setComments(prev => [tempComment!, ...prev]);
+      setComment("");
+  
       const response = await fetch(
         "https://edutalk-by8w.onrender.com/api/comments",
         {
@@ -186,35 +217,47 @@ export function AssignmentDetailPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            assignmentId: id,
             content: comment.trim(),
-            authorId: decodedToken.id,
+            assignment_id: id,
+            author_id: decodedToken.id,
           }),
         }
       );
-
-      if (response.ok) {
-        const newComment = await response.json();
-        setComments((prev) => [
-          ...prev,
-          {
-            ...newComment,
-            author: decodedToken.name,
-            avatar: decodedToken.avatar || "https://i.pravatar.cc/150?img=3",
-          },
-        ]);
-        setComment("");
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Error en la respuesta del servidor");
       }
+  
+      // Refrescar comentarios
+      if (id) { // Añadir validación adicional para id
+        const updatedComments = await fetchComments(id);
+        setComments(updatedComments);
+      }
+  
+      toast({
+        title: "¡Comentario publicado!",
+        description: "Tu comentario se ha compartido con la clase",
+      });
+  
     } catch (error) {
+      // Revertir actualización optimista solo si tempComment existe
+      if (tempComment) {
+        setComments(prev => prev.filter(c => c.id !== tempComment!.id));
+      }
+      
+      console.error("Error submitting comment:", error);
       toast({
         title: "Error",
-        description: "Error al publicar el comentario",
+        description: error instanceof Error 
+          ? error.message 
+          : "No se pudo publicar el comentario",
         variant: "destructive",
       });
     }
   };
 
-  // Función para formatear fechas
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("es-ES", {
@@ -225,7 +268,6 @@ export function AssignmentDetailPage() {
     }).format(date);
   };
 
-  // Resto de funciones existentes (handleGradeUpdate, handleSubmit)
   const handleGradeUpdate = async (
     submissionId: string,
     newGrade: number | null
@@ -273,7 +315,6 @@ export function AssignmentDetailPage() {
     if (!token) return;
 
     try {
-      // 1. Obtener la firma para Cloudinary
       const signatureRes = await fetch(
         "https://edutalk-by8w.onrender.com/api/auth/get-signature",
         {
@@ -287,7 +328,6 @@ export function AssignmentDetailPage() {
       if (!signatureRes.ok) throw new Error("Error al obtener la firma");
       const signatureData = await signatureRes.json();
 
-      // 2. Subir el archivo a Cloudinary
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("api_key", "965141632148366");
@@ -306,7 +346,6 @@ export function AssignmentDetailPage() {
       if (!cloudinaryRes.ok) throw new Error("Error al subir el archivo");
       const cloudinaryData = await cloudinaryRes.json();
 
-      // 3. Crear la entrega
       const decodedToken = jwtDecode(token) as { id: string };
       const submissionRes = await fetch(
         "https://edutalk-by8w.onrender.com/api/submission",

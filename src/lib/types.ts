@@ -32,10 +32,12 @@ export interface Message {
 
 export interface Comment {
   id: string;
-  author: string;
   content: string;
-  timestamp: string;
-  avatar: string;
+  createdAt: string;
+  Author?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface Assignment {
