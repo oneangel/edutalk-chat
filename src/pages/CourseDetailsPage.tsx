@@ -254,87 +254,89 @@ export function CourseDetailsPage() {
       </div>
 
       {/* Modal para escribir la publicación */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogTrigger asChild>
-          <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-2 cursor-pointer hover:bg-gray-100">
-            <p className="text-gray-500">Anuncia algo a la clase</p>
-          </div>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crear Publicación</DialogTitle>
-            <DialogDescription>
-              Asigna una tarea o publica algo interesante para la clase.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            placeholder="Título de la tarea"
-            value={assignmentTitle}
-            onChange={(e) => setAssignmentTitle(e.target.value)}
-            disabled={loading}
-          />
-          <Input
-            placeholder="Descripción de la clase"
-            value={assignmentDescription}
-            onChange={(e) => setAssignmentDescription(e.target.value)}
-            disabled={loading}
-          />
-          <Input
-            type="date"
-            value={deliveryDate}
-            onChange={(e) => setDeliveryDate(e.target.value)}
-            disabled={loading}
-          />
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileChange}
-            accept=".pdf,.doc,.docx"
-            multiple // Habilitar selección múltiple
-          />
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => document.getElementById("file-upload")?.click()}
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Seleccionar archivos
-          </Button>
-
-          {/* Mostrar los archivos seleccionados */}
-          <div className="space-y-2 mt-4">
-            {selectedFiles.map((file) => (
-              <div
-                key={file.name}
-                className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
-              >
-                <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
-                <span className="truncate">{file.name}</span>
-                <button
-                  onClick={() => handleRemoveFile(file.name)}
-                  className="ml-2 text-red-500"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
+      {userType === "teacher" && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-2 cursor-pointer hover:bg-gray-100">
+              <p className="text-gray-500">Anuncia algo a la clase</p>
+            </div>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Crear Publicación</DialogTitle>
+              <DialogDescription>
+                Asigna una tarea o publica algo interesante para la clase.
+              </DialogDescription>
+            </DialogHeader>
+            <Input
+              placeholder="Título de la tarea"
+              value={assignmentTitle}
+              onChange={(e) => setAssignmentTitle(e.target.value)}
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              onClick={handleCreateAssignment}
+            />
+            <Input
+              placeholder="Descripción de la clase"
+              value={assignmentDescription}
+              onChange={(e) => setAssignmentDescription(e.target.value)}
+              disabled={loading}
+            />
+            <Input
+              type="date"
+              value={deliveryDate}
+              onChange={(e) => setDeliveryDate(e.target.value)}
+              disabled={loading}
+            />
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx"
+              multiple // Habilitar selección múltiple
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => document.getElementById("file-upload")?.click()}
             >
-              {loading ? "Creando..." : "Crear"}
+              <Upload className="w-4 h-4 mr-2" />
+              Seleccionar archivos
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+            {/* Mostrar los archivos seleccionados */}
+            <div className="space-y-2 mt-4">
+              {selectedFiles.map((file) => (
+                <div
+                  key={file.name}
+                  className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
+                >
+                  <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    onClick={() => handleRemoveFile(file.name)}
+                    className="ml-2 text-red-500"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={loading}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                onClick={handleCreateAssignment}
+              >
+                {loading ? "Creando..." : "Crear"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Lista de tareas/publicaciones */}
       {course.assignments.length > 0 ? (
@@ -345,7 +347,7 @@ export function CourseDetailsPage() {
             onClick={() => {
               navigate(
                 userType === "teacher"
-                  ? `/tareas/${assignment.id}`
+                  ? `/tareas/${assignment.id}/entregas`
                   : `/tareas/${assignment.id}`
               );
             }}

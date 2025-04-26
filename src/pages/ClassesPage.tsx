@@ -339,7 +339,9 @@ export function ClassesPage() {
 
       {classes.length === 0 ? (
         <p className="text-center text-gray-500">
-          No estás inscrito en ninguna clase aún.
+          {userType === "teacher"
+            ? "No has creado ninguna clase aún."
+            : "No has sido inscrito en ninguna clase aún."}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -355,8 +357,12 @@ export function ClassesPage() {
                 {classItem.name}
               </div>
               <CardHeader>
-                <CardTitle className="text-xl">{classItem.description}</CardTitle>
-                <CardDescription>Codigo de la clase: {classItem.code}</CardDescription>
+                <CardTitle className="text-xl">
+                  {classItem.description}
+                </CardTitle>
+                <CardDescription>
+                  Codigo de la clase: {classItem.code}
+                </CardDescription>
               </CardHeader>
             </Card>
           ))}

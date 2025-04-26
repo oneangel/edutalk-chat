@@ -33,6 +33,7 @@ function App() {
           <Route path="clases" element={<ClassesPage />} />
           <Route path="tareas" element={<AssignmentsPage />} />
           <Route path="tareas/:id" element={<AssignmentDetailPage />} />
+          <Route path="tareas/:id/entregas" element={<SubmissionsPage />} />
           <Route path="calificaciones" element={<GradesPage />} />
           <Route path="calendario" element={<CalendarPage />} />
           <Route path="clases/:id" element={<CourseDetailsPage />} />
