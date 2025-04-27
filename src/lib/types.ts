@@ -54,11 +54,15 @@ export interface Assignment {
 export interface Submission {
   id: string;
   student_id: string;
-  student?: User; 
+  student?: {
+    name: string;
+    lastname: string;
+  };
   file_url: string;
   grade: number | null;
   createdAt: string;
-  status: 'pending' | 'submitted' | 'late' | 'graded';
+  status: 'pending' | 'submitted' | 'late' | 'graded' | 'rejected';
+  onTime: number | false;
 }
 
 export type UserType = "student" | "teacher";

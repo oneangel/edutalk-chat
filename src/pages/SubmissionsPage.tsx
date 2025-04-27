@@ -19,50 +19,113 @@ export function SubmissionsPage() {
           console.error("No token found");
           return;
         }
-
-        const response = await fetch(
+  
+        // 1. Obtener las submissions
+        const submissionsResponse = await fetch(
           `https://edutalk-by8w.onrender.com/api/submission/assignment/${id}`,
           {
-            method: "GET",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
           }
         );
-
-        if (!response.ok) {
-          throw new Error("Error al obtener las entregas");
-        }
-
-        const data = await response.json();
-        setSubmissions(data);
+  
+        if (!submissionsResponse.ok) throw new Error("Error al obtener entregas");
+        const submissionsData = await submissionsResponse.json();
+  
+        // 2. Obtener información de usuarios para TODOS los estudiantes que han entregado
+        const uniqueStudentIds = [...new Set(submissionsData.map((s: any) => s.student_id))];
+        
+        const usersPromises = uniqueStudentIds.map(studentId => 
+          fetch(`https://edutalk-by8w.onrender.com/api/user/${studentId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+        );
+  
+        const usersResponses = await Promise.all(usersPromises);
+        const usersData = await Promise.all(usersResponses.map(res => res.ok ? res.json() : null));
+  
+        // 3. Combinar la información
+        const normalized = submissionsData.map((submission: Submission) => {
+          const deliveryDate = new Date(assignment?.delivery_date ?? "");
+          const submissionDate = new Date(submission.createdAt);
+          
+          // Encontrar el usuario correspondiente (student_id = user_id)
+          const user = usersData.find(u => u?.id === submission.student_id);
+  
+          return {
+            ...submission,
+            status: submission.status.toLowerCase(),
+            onTime: submissionDate <= deliveryDate,
+            student: user ? {
+              name: user.name || 'Sin nombre',
+              lastname: user.lastname || 'Sin apellido'
+            } : undefined
+          };
+        });
+  
+        setSubmissions(normalized);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching data:", error);
       }
     };
+  
+    if (id) fetchSubmissions();
+  }, [id, assignment?.delivery_date]);
 
-    if (id) {
-      fetchSubmissions();
+  const updateGrade = async (submissionId: string, grade: number | null) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+  
+      const response = await fetch(
+        `https://edutalk-by8w.onrender.com/api/submission/${submissionId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ 
+            grade: grade, 
+            status: "GRADED"
+          }),
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error("Error al actualizar la calificación");
+      }
+    } catch (error) {
+      console.error(error);
     }
-  }, [id]);
-
-  const handleGradeUpdate = (
-    submissionId: string,
-    newGrade: number | null
-  ): void => {
-    setSubmissions((prev) =>
-      prev.map((s) =>
-        s.id === submissionId
-          ? {
-              ...s,
-              grade: newGrade,
-              status: newGrade !== null ? "graded" : s.status,
-            }
-          : s
-      )
-    );
   };
+  
+  
+  const handleGradeUpdate = async (submissionId: string, newGrade: number | null): Promise<void> => {
+    try {
+      await updateGrade(submissionId, newGrade);
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.id === submissionId
+            ? {
+                ...s,
+                grade: newGrade,
+                status: newGrade !== null ? "graded" : "submitted",
+              }
+            : s
+        )
+      );
+    } catch (error) {
+      console.error("Error al actualizar la calificación:", error);
+    }
+  };
+  
 
   const formatDate = (dateString: string): string => {
     const options: Intl.DateTimeFormatOptions = {
@@ -86,14 +149,14 @@ export function SubmissionsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            {countByStatus("submitted")} En tiempo
-          </Badge>
-          <Badge variant="secondary" className="bg-red-100 text-red-800">
-            {countByStatus("late")} Tarde
-          </Badge>
           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
             {countByStatus("graded")} Calificadas
+          </Badge>
+          <Badge variant="secondary" className="bg-green-100 text-green-800">
+            {submissions.filter((s) => s.status !== "graded" && s.onTime).length} En tiempo
+          </Badge>
+          <Badge variant="secondary" className="bg-red-100 text-red-800">
+            {submissions.filter((s) => s.status !== "graded" && !s.onTime).length} Tarde
           </Badge>
         </div>
       </div>

@@ -16,10 +16,7 @@ export function AssignmentDetailPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [comment, setComment] = useState("");
-  // Mantenemos el estado existente para compatibilidad con los componentes
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  // Estado adicional para múltiples archivos (interno)
-  const [selectedFilesInternal, setSelectedFilesInternal] = useState<File[]>([]);
 
   // Estados de carga
   const [isLoading, setIsLoading] = useState(true);
@@ -29,13 +26,6 @@ export function AssignmentDetailPage() {
   // Estados de usuario
   const [userType, setUserType] = useState<UserType>("student");
   const [tempGrades, setTempGrades] = useState<Record<string, number | null>>({});
-
-  // Sincronizar el archivo seleccionado con la lista interna
-  useEffect(() => {
-    if (selectedFile) {
-      setSelectedFilesInternal([selectedFile]);
-    }
-  }, [selectedFile]);
 
   const fetchComments = async (assignmentId: string) => {
     const token = localStorage.getItem("token");
@@ -130,15 +120,13 @@ export function AssignmentDetailPage() {
             setSubmissions(enrichedSubmissions);
           }
         } else {
-          // Student-specific fetch - AQUÍ ESTÁ LA CORRECCIÓN
-          // Usamos la nueva ruta que incluye student_id y assignment_id
-          const studentId = decodedToken.id;
+          // Student-specific fetch
           const submissionRes = await fetch(
-            `https://edutalk-by8w.onrender.com/api/submission/student/${studentId}/assignment/${id}`,
+            `https://edutalk-by8w.onrender.com/api/assignment/${id}/submission`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
 
-          if (submissionRes.ok) { 
+          if (submissionRes.ok) {
             const submissionData = await submissionRes.json();
             if (submissionData) {
               setSubmission({
@@ -152,7 +140,6 @@ export function AssignmentDetailPage() {
           }
         }
       } catch (error) {
-        console.error("Error al cargar los datos:", error);
         toast({
           title: "Error",
           description: "Error al cargar los datos",
@@ -270,6 +257,7 @@ export function AssignmentDetailPage() {
     }
   };
 
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat("es-ES", {
@@ -313,17 +301,11 @@ export function AssignmentDetailPage() {
     }
   };
 
-  // Función actualizada para enviar una sola URL compatible con el modelo
   const handleSubmit = async () => {
-    // Usamos los archivos del estado interno o el archivo seleccionado individual
-    const filesToUpload = selectedFilesInternal.length > 0 
-      ? selectedFilesInternal 
-      : (selectedFile ? [selectedFile] : []);
-
-    if (filesToUpload.length === 0) {
+    if (!selectedFile) {
       toast({
         title: "¡Advertencia!",
-        description: "Selecciona al menos un archivo para entregar la tarea",
+        description: "Selecciona un archivo para entregar la tarea",
       });
       return;
     }
@@ -338,7 +320,6 @@ export function AssignmentDetailPage() {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
         }
@@ -347,37 +328,23 @@ export function AssignmentDetailPage() {
       if (!signatureRes.ok) throw new Error("Error al obtener la firma");
       const signatureData = await signatureRes.json();
 
-      // Subir todos los archivos seleccionados a Cloudinary
-      const uploadedFileUrls: string[] = [];
-      for (const file of filesToUpload) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", "965141632148366");
-        formData.append("timestamp", signatureData.timestamp);
-        formData.append("signature", signatureData.signature);
-        formData.append("folder", "tareas");
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("api_key", "965141632148366");
+      formData.append("timestamp", signatureData.timestamp);
+      formData.append("signature", signatureData.signature);
+      formData.append("folder", "tareas");
 
-        const cloudinaryRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/raw/upload`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/raw/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-        if (!cloudinaryRes.ok) throw new Error("Error al subir el archivo");
-        const cloudinaryData = await cloudinaryRes.json();
-        uploadedFileUrls.push(cloudinaryData.secure_url);
-      }
-
-      console.log(uploadedFileUrls);
-
-      // Adaptación: Convertir el array de URLs a una única string
-      // Opción 1: Usar solo la primera URL si hay varias
-      const fileUrl = uploadedFileUrls[0];
-      
-      // Opción 2 (alternativa): Convertir el array a una cadena JSON
-      // const fileUrl = JSON.stringify(uploadedFileUrls);
+      if (!cloudinaryRes.ok) throw new Error("Error al subir el archivo");
+      const cloudinaryData = await cloudinaryRes.json();
 
       const decodedToken = jwtDecode(token) as { id: string };
       const submissionRes = await fetch(
@@ -391,7 +358,7 @@ export function AssignmentDetailPage() {
           body: JSON.stringify({
             student_id: decodedToken.id,
             assignment_id: id,
-            file_url: fileUrl, // Enviamos solo una URL como string
+            file_url: cloudinaryData.secure_url,
           }),
         }
       );
@@ -405,7 +372,6 @@ export function AssignmentDetailPage() {
 
       setSubmissionUploaded(true);
       setSelectedFile(null);
-      setSelectedFilesInternal([]);
     } catch (error) {
       console.error(error);
       toast({

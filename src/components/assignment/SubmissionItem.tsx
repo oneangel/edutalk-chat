@@ -14,7 +14,7 @@ interface SubmissionItemProps {
 export function SubmissionItem({
   submission,
   onGradeUpdate,
-  formatDate
+  formatDate,
 }: SubmissionItemProps) {
   const [gradeInput, setGradeInput] = useState<number | null>(submission.grade);
 
@@ -22,24 +22,33 @@ export function SubmissionItem({
     <div className="flex items-center justify-between p-4 border rounded-lg gap-4">
       <div className="flex items-center gap-3 flex-1">
         <div className="min-w-0">
-          <p className="font-medium truncate">
-            Estudiante {submission.student_id.slice(-4)}
-          </p>
+        <p className="font-medium truncate">
+          {submission.student 
+            ? `${submission.student.name} ${submission.student.lastname}`
+            : `Estudiante ${submission.student_id.slice(-4)}`}
+        </p>
           <div className="flex items-center gap-2 mt-1">
-            <Badge variant={
-              submission.status === 'late' ? 'destructive' :
-              submission.status === 'graded' ? 'default' : 'secondary'
-            }>
-              {submission.status === 'submitted' ? 'En tiempo' :
-               submission.status === 'late' ? 'Tarde' :
-               submission.status === 'graded' ? 'Calificado' : 'Pendiente'}
-            </Badge>
+          <Badge
+            variant={
+              submission.status === "graded"
+                ? "default"
+                : submission.onTime
+                ? "secondary"
+                : "destructive"
+            }
+          >
+            {submission.status === "graded"
+              ? "Calificado"
+              : submission.onTime
+              ? "En tiempo"
+              : "Tarde"}
+          </Badge>
             <span className="text-sm text-gray-500">
               {formatDate(submission.createdAt)}
             </span>
           </div>
         </div>
-        
+
         <a
           href={submission.file_url}
           target="_blank"
@@ -53,19 +62,21 @@ export function SubmissionItem({
 
       <div className="flex items-center gap-2">
         {submission.grade !== null && (
-          <span className="text-sm font-medium">
-            {submission.grade}/100
-          </span>
+          <span className="text-sm font-medium">{submission.grade}/100</span>
         )}
         <Input
           type="number"
           value={gradeInput ?? ""}
-          onChange={(e) => setGradeInput(e.target.value === "" ? null : Number(e.target.value))}
+          onChange={(e) =>
+            setGradeInput(
+              e.target.value === "" ? null : Number(e.target.value)
+            )
+          }
           min="0"
           max="100"
           className="w-20"
         />
-        <Button 
+        <Button
           onClick={() => onGradeUpdate(submission.id, gradeInput)}
           disabled={gradeInput === submission.grade}
           size="sm"
