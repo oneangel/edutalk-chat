@@ -21,6 +21,8 @@ interface Assignment {
   delivery_date: string;
   status: boolean;
   file_url: string[];
+  assignment_type: 'file' | 'quiz';
+  quiz_id?: string;
 }
 
 interface Course {
@@ -43,6 +45,7 @@ export function CourseDetailsPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]); // Cambiado a array
   const navigate = useNavigate();
   const [userType, setUserType] = useState("");
+  const [assignmentType, setAssignmentType] = useState<'file' | 'quiz'>('file');
 
   useEffect(() => {
     const fetchCourseAndAssignments = async () => {
@@ -123,6 +126,11 @@ export function CourseDetailsPage() {
       return;
     }
 
+    if (assignmentType === 'file' && selectedFiles.length === 0) {
+      alert("Por favor, selecciona al menos un archivo.");
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       console.error("No token found");
@@ -132,78 +140,76 @@ export function CourseDetailsPage() {
     setLoading(true);
 
     try {
-      const signature = await fetch(
-        "https://edutalk-by8w.onrender.com/api/auth/get-signature",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await signature.json();
-
-      // Subir todos los archivos seleccionados a Cloudinary
-      const uploadedFileUrls: string[] = [];
-      for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("api_key", "965141632148366");
-        formData.append("timestamp", data.timestamp);
-        formData.append("signature", data.signature);
-        formData.append("folder", "tareas");
-
-        const cloudinaryResponse = await fetch(
-          `https://api.cloudinary.com/v1_1/${data.cloudName}/raw/upload`,
+      if (assignmentType === 'file') {
+        const signature = await fetch(
+          "https://edutalk-by8w.onrender.com/api/auth/get-signature",
           {
             method: "POST",
-            body: formData,
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
-        const cloudinaryData = await cloudinaryResponse.json();
-        uploadedFileUrls.push(cloudinaryData.secure_url); // Guarda la URL del archivo
-      }
+        const data = await signature.json();
 
-      //Imprimir las url del arreglo
-      console.log(uploadedFileUrls);
+        // Subir todos los archivos seleccionados a Cloudinary
+        const uploadedFileUrls: string[] = [];
+        for (const file of selectedFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("api_key", "965141632148366");
+          formData.append("timestamp", data.timestamp);
+          formData.append("signature", data.signature);
+          formData.append("folder", "tareas");
 
-      // Crear la tarea con las URLs de los archivos
-      const response = await fetch(
-        "https://edutalk-by8w.onrender.com/api/assignment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title: assignmentTitle,
-            description: assignmentDescription,
-            course_id: id,
-            delivery_date: deliveryDate,
-            file_url: uploadedFileUrls,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.log(response.json());
-
-        throw new Error("Error al crear la tarea");
-      }
-
-      const newAssignment = await response.json();
-      setCourse((prevCourse) =>
-        prevCourse
-          ? {
-              ...prevCourse,
-              assignments: [...prevCourse.assignments, newAssignment],
+          const cloudinaryResponse = await fetch(
+            `https://api.cloudinary.com/v1_1/${data.cloudName}/raw/upload`,
+            {
+              method: "POST",
+              body: formData,
             }
-          : prevCourse
-      );
+          );
+
+          const cloudinaryData = await cloudinaryResponse.json();
+          uploadedFileUrls.push(cloudinaryData.secure_url);
+        }
+
+        // Crear la tarea con las URLs de los archivos
+        const response = await fetch(
+          "https://edutalk-by8w.onrender.com/api/assignment",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              title: assignmentTitle,
+              description: assignmentDescription,
+              course_id: id,
+              delivery_date: deliveryDate,
+              file_url: uploadedFileUrls,
+              assignment_type: 'file',
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Error al crear la tarea");
+        }
+
+        const newAssignment = await response.json();
+        setCourse((prevCourse) =>
+          prevCourse
+            ? {
+                ...prevCourse,
+                assignments: [...prevCourse.assignments, newAssignment],
+              }
+            : prevCourse
+        );
+      }
 
       // Restablecer valores del formulario y cerrar el modal
       setAssignmentTitle("");
@@ -234,18 +240,18 @@ export function CourseDetailsPage() {
 
   if (!course)
     return (
-      <p className="text-center mt-10">Cargando detalles de la clase...</p>
+      <p className="mt-10 text-center">Cargando detalles de la clase...</p>
     );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl p-6 mx-auto space-y-6">
       {/* Encabezado */}
-      <div className="relative bg-black text-white text-3xl font-bold flex items-center justify-center h-40 rounded-lg shadow-md">
+      <div className="relative flex items-center justify-center h-40 text-3xl font-bold text-white bg-black rounded-lg shadow-md">
         {course.name}
       </div>
 
       {/* Información de la clase */}
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="p-4 bg-white rounded-lg shadow-md">
         <p className="text-gray-600">{course.description}</p>
         <p className="mt-2 text-sm text-gray-500">
           Código de la clase:{" "}
@@ -257,7 +263,7 @@ export function CourseDetailsPage() {
       {userType === "teacher" && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <div className="bg-white p-4 rounded-lg shadow-md flex items-center space-x-2 cursor-pointer hover:bg-gray-100">
+            <div className="flex items-center p-4 space-x-2 bg-white rounded-lg shadow-md cursor-pointer hover:bg-gray-100">
               <p className="text-gray-500">Anuncia algo a la clase</p>
             </div>
           </DialogTrigger>
@@ -268,6 +274,22 @@ export function CourseDetailsPage() {
                 Asigna una tarea o publica algo interesante para la clase.
               </DialogDescription>
             </DialogHeader>
+            <div className="flex mb-4 space-x-4">
+              <Button
+                variant={assignmentType === 'file' ? 'default' : 'outline'}
+                onClick={() => setAssignmentType('file')}
+                className="flex-1"
+              >
+                Tarea Normal
+              </Button>
+              <Button
+                variant={assignmentType === 'quiz' ? 'default' : 'outline'}
+                onClick={() => setAssignmentType('quiz')}
+                className="flex-1"
+              >
+                Formulario
+              </Button>
+            </div>
             <Input
               placeholder="Título de la tarea"
               value={assignmentTitle}
@@ -286,43 +308,55 @@ export function CourseDetailsPage() {
               onChange={(e) => setDeliveryDate(e.target.value)}
               disabled={loading}
             />
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              onChange={handleFileChange}
-              accept=".pdf,.doc,.docx"
-              multiple // Habilitar selección múltiple
-            />
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => document.getElementById("file-upload")?.click()}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Seleccionar archivos
-            </Button>
-
-            {/* Mostrar los archivos seleccionados */}
-            <div className="space-y-2 mt-4">
-              {selectedFiles.map((file) => (
-                <div
-                  key={file.name}
-                  className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
+            {assignmentType === 'file' ? (
+              <>
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx"
+                  multiple
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => document.getElementById("file-upload")?.click()}
                 >
-                  <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
-                  <span className="truncate">{file.name}</span>
-                  <button
-                    onClick={() => handleRemoveFile(file.name)}
-                    className="ml-2 text-red-500"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Seleccionar archivos
+                </Button>
 
-            <div className="flex justify-end space-x-2 mt-4">
+                {/* Mostrar los archivos seleccionados */}
+                <div className="mt-4 space-y-2">
+                  {selectedFiles.map((file) => (
+                    <div
+                      key={file.name}
+                      className="flex items-center p-2 text-sm text-gray-600 rounded bg-gray-50"
+                    >
+                      <Paperclip className="flex-shrink-0 w-4 h-4 mr-1" />
+                      <span className="truncate">{file.name}</span>
+                      <button
+                        onClick={() => handleRemoveFile(file.name)}
+                        className="ml-2 text-red-500"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(`/quizzes/create?course_id=${id}`)}
+              >
+                Crear Formulario
+              </Button>
+            )}
+
+            <div className="flex justify-end mt-4 space-x-2">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
@@ -343,7 +377,7 @@ export function CourseDetailsPage() {
         course.assignments.map((assignment) => (
           <div
             key={assignment.id}
-            className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-50"
+            className="p-4 bg-white rounded-lg shadow-md cursor-pointer hover:bg-gray-50"
             onClick={() => {
               navigate(
                 userType === "teacher"
@@ -352,10 +386,10 @@ export function CourseDetailsPage() {
               );
             }}
           >
-            <div className="border-b py-2">
-              <h3 className="font-semibold text-lg">{assignment.title}</h3>
+            <div className="py-2 border-b">
+              <h3 className="text-lg font-semibold">{assignment.title}</h3>
               <p className="text-gray-600">{assignment.description}</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="mt-1 text-sm text-gray-500">
                 Fecha de entrega:{" "}
                 <span className="font-semibold">
                   {new Date(assignment.delivery_date).toLocaleDateString()}
@@ -388,7 +422,7 @@ export function CourseDetailsPage() {
           </div>
         ))
       ) : (
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div className="p-4 bg-white rounded-lg shadow-md">
           <p className="text-gray-500">No hay publicaciones aún.</p>
         </div>
       )}

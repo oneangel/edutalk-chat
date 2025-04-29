@@ -13,6 +13,8 @@ import { ClassesPage } from '@/pages/ClassesPage';
 import { AssignmentDetailPage } from '@/pages/AssignmentDetailPage';
 import { CourseDetailsPage } from './pages/CourseDetailsPage';
 import { SubmissionsPage } from './pages/SubmissionsPage';
+import { CreateQuizPage } from './pages/CreateQuizPage';
+import { TakeQuizPage } from './pages/TakeQuizPage';
 
 function App() {
   return (
@@ -37,6 +39,8 @@ function App() {
           <Route path="calificaciones" element={<GradesPage />} />
           <Route path="calendario" element={<CalendarPage />} />
           <Route path="clases/:id" element={<CourseDetailsPage />} />
+          <Route path="quizzes/create" element={<CreateQuizPage />} />
+          <Route path="quizzes/:id/take" element={<TakeQuizPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

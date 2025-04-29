@@ -60,8 +60,6 @@ export function TeacherView({
       </div>
       
       <div className="w-80">
-        <p>Que se muestren los archivos adjuntados por el alumno</p>
-        <p>Lo de abajo es una referencia de la seccion donde lo debes poner</p>
         <FileUploadSection
           submission={submission}
           selectedFile={selectedFile}

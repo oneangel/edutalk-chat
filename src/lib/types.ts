@@ -49,6 +49,8 @@ export interface Assignment {
   description: string;
   courseName: string;
   teacherName: string;
+  assignment_type: 'file' | 'quiz';
+  quiz_id?: string;
 }
 
 export interface Submission {
